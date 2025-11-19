@@ -2,12 +2,7 @@ import { Client } from 'pg';
 import { createClient } from '@clickhouse/client';
 
 const POSTGRESQL_URL = process.env.POSTGRESQL_URL || 'postgresql://postgres:postgres@localhost:5432/stockdata';
-const CLICKHOUSE_CONFIG = {
-  host: 'localhost',
-  port: 9000,
-  username: 'default',
-  password: ''
-};
+const CLICKHOUSE_HOST = process.env.CLICKHOUSE_HOST || 'localhost:8123';
 
 interface BenchmarkResult {
   database: string;
@@ -23,7 +18,7 @@ class Benchmark {
   
   constructor() {
     this.pgClient = new Client({ connectionString: POSTGRESQL_URL });
-    this.chClient = createClient(CLICKHOUSE_CONFIG);
+    this.chClient = createClient({ host: `http://${CLICKHOUSE_HOST}` });
   }
   
   async connect() {
@@ -98,6 +93,11 @@ class Benchmark {
         name: 'simple_select_5yr',
         pg: `SELECT date, close FROM stock_data WHERE instrument_id = ${testInstrumentId} AND date >= '2018-12-30' AND date <= '2023-12-29' ORDER BY date`,
         ch: `SELECT date, close FROM stock_data WHERE instrument_id = ${testInstrumentId} AND date >= '2018-12-30' AND date <= '2023-12-29' ORDER BY date`
+      },
+      {
+        name: 'simple_select_10yr',
+        pg: `SELECT date, close FROM stock_data WHERE instrument_id = ${testInstrumentId} AND date >= '2014-01-01' AND date <= '2023-12-29' ORDER BY date`,
+        ch: `SELECT date, close FROM stock_data WHERE instrument_id = ${testInstrumentId} AND date >= '2014-01-01' AND date <= '2023-12-29' ORDER BY date`
       },
       {
         name: 'range_aggregation_1yr',
