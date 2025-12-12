@@ -1,90 +1,121 @@
-# pgch
+# Database Performance Benchmark: PostgreSQL vs ClickHouse vs TimescaleDB
 
-This project compares PostgreSQL and ClickHouse performance for storing and querying historical stock data under different scenarios.
+A comprehensive performance comparison of PostgreSQL, ClickHouse, and TimescaleDB for analytical workloads using 25 million stock market records.
 
-## dataset
+## Dataset
 
-- **50+ million records** of historical stock data
-- **10 years of trading data** (2014-2023, weekdays only)
-- **Realistic stock data** with proper price relationships and volume correlation
+- **25 million records** of synthetic stock market data
+- **10,000 different instruments** with realistic price movements
+- **7+ years of trading data** (2014-2021) with proper date progression
+- **Realistic OHLCV data** with volume correlation and price relationships
 
-## setup
+## Quick Start
 
-1. Start Databases
-
+1. **Start databases**
 ```bash
 docker compose up -d
 ```
-This starts:
-- PostgreSQL on port 5432
-- ClickHouse on ports 8123 (HTTP) and 9000 (native)
 
-2. dependencies
-
+2. **Install dependencies**
 ```bash
 bun install
 ```
 
-3. database schemas
-
+3. **Generate 25M records**
 ```bash
-bun run setup
+bun run src/seed_data.ts
 ```
 
-Creates tables with proper indexing:
-- PostgreSQL: Primary key, secondary indexes on date fields
-- ClickHouse: MergeTree engine with optimized column ordering
-
-4. insertion of 50M records
-
+4. **Run performance report**
 ```bash
-bun run src/stream-insert-50m.ts
+bun run src/report.ts
 ```
 
-Streams 50+ million records directly to both databases:
-- Generates realistic stock price data with proper relationships
-- Volume correlation with price movements  
-- Parallel insertion to both PostgreSQL and ClickHouse
-- Real-time performance metrics
+## Performance Results
 
-### performance
+### Database Scale
+- **PostgreSQL**: 25,000,000 rows
+- **ClickHouse**: 25,000,000 rows  
+- **TimescaleDB**: 25,000,000 rows
 
-```bash
-bun run benchmark
+### Storage Efficiency
+
+| Database | Storage Size | Compression vs PostgreSQL |
+|----------|--------------|---------------------------|
+| PostgreSQL | 2.3 GB | 1.0x (baseline) |
+| ClickHouse | 1.78 GB (~1,825 MB) | 1.29x better |
+| TimescaleDB | 2.7 GB | 0.86x (16% larger) |
+
+### Query Performance Comparison
+
+| Query Type | PostgreSQL (ms) | ClickHouse (ms) | TimescaleDB (ms) | Best Performer |
+|------------|------------------|------------------|-------------------|----------------|
+| Simple SELECT 1yr | 49 | 87 | **23** | TimescaleDB |
+| Simple SELECT 5yr | **2** | 18 | **2** | PostgreSQL/TimescaleDB |
+| Simple SELECT 10yr | **1** | 20 | **2** | PostgreSQL |
+| Range aggregation 1yr | 2,689 | **32** | 347 | **ClickHouse (84x faster)** |
+| Range aggregation 5yr | 2,352 | **53** | 3,621 | **ClickHouse (44x faster)** |
+| Multi-year price avg | 2,347 | **28** | 3,720 | **ClickHouse (84x faster)** |
+| Yearly volume analysis | 2,309 | **28** | 3,373 | **ClickHouse (82x faster)** |
+| Large timespan aggregation | 2,502 | **48** | 3,244 | **ClickHouse (52x faster)** |
+| Complex analytics multi-year | 2,270 | **58** | 3,138 | **ClickHouse (39x faster)** |
+| Cross-year volatility | 2,101 | **28** | 2,875 | **ClickHouse (75x faster)** |
+| Decade high volume scan | 2,242 | 174 | 3,418 | **ClickHouse (13x faster)** |
+
+## Key Insights
+
+### 🏆 Winners by Category
+
+- **Point queries (SELECT with LIMIT)**: PostgreSQL/TimescaleDB excel
+- **Analytical aggregations**: ClickHouse dominates with 10x-80x speedups
+- **Storage efficiency**: ClickHouse provides best compression
+- **Complex analytics**: ClickHouse consistently outperforms
+
+### 📊 Performance Patterns
+
+1. **PostgreSQL**: Best for simple point queries and small result sets
+2. **ClickHouse**: Exceptional for aggregations, analytics, and large scans
+3. **TimescaleDB**: Good for time-series point queries, struggles with complex aggregations
+
+### 💾 Storage Analysis
+
+- ClickHouse achieves moderate compression gains (~29% better than PostgreSQL)
+- TimescaleDB uses more storage due to hypertable overhead
+- All databases handle 25M records efficiently
+
+## Architecture
+
+### Database Configurations
+- **PostgreSQL**: Standard B-tree indexes on (instrument_id, date)
+- **ClickHouse**: MergeTree engine optimized for analytical queries  
+- **TimescaleDB**: Hypertables with time-based partitioning
+
+### Data Model
+```sql
+CREATE TABLE stock_data (
+    instrument_id INTEGER,
+    date DATE,
+    open DECIMAL(10,2),
+    high DECIMAL(10,2),
+    low DECIMAL(10,2),
+    close DECIMAL(10,2),
+    volume BIGINT,
+    PRIMARY KEY (instrument_id, date)
+);
 ```
 
-| Query Type | PostgreSQL (ms) | ClickHouse (ms) | Speedup |
-|------------|-----------------|-----------------|---------|
-| Simple SELECT 5yr | 2 | 14 | 0.14x |
-| Simple SELECT 10yr | 3 | 19 | 0.16x |
-| Complex analytics multi-year | 5,447 | 1,883 | 2.89x |
-| Cross-year volatility | 4,971 | 1,446 | 3.44x |
-| Simple SELECT 1yr | 81 | 22 | 3.68x |
-| Range aggregation 1yr | 6,258 | 1,015 | 6.17x |
-| Range aggregation 5yr | 5,201 | 792 | 6.57x |
-| Large timespan aggregation | 7,983 | 962 | 8.30x |
-| Multi-year price avg | 4,267 | 385 | 11.08x |
-| Yearly volume analysis | 5,100 | 402 | 12.69x |
-| Decade high volume scan | 4,613 | 13 | 354.85x |
+## Conclusion
 
-## storage efficiency
+**ClickHouse emerges as the clear winner for analytical workloads**, delivering:
+- 10x-80x performance improvements on aggregation queries
+- Consistent sub-100ms response times for complex analytics
+- Better storage efficiency through columnar compression
 
-| Database | Storage Size | Compression Ratio |
-|----------|--------------|-------------------|
-| PostgreSQL | 3,657 MB | 1.0x (baseline) |
-| ClickHouse | 1,311 MB | 2.79x smaller |
+**PostgreSQL and TimescaleDB** remain excellent choices for:
+- Simple point queries and small result sets
+- Applications requiring full SQL compatibility
+- Mixed OLTP/OLAP workloads
 
-ClickHouse's columnar storage achieves nearly 3x better compression than PostgreSQL's row-based storage on the same 50M+ record dataset.
-
-## usage notes
-
-- Ensure Docker is running before starting
-- The data directory is persistent across container restarts  
-- 50M record insertion takes approximately 15 minutes
-- Generated data is deterministic for reproducible benchmarks
-- All scripts include error handling and progress reporting
-- Results include detailed timing and throughput metrics
-
-## license
+## License
 
 [MIT](./LICENSE)

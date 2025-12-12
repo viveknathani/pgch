@@ -5,14 +5,23 @@
   "main": "index.js",
   "scripts": {
     "setup": "bun run src/setup.ts",
+    "setup-timeseries": "bun run src/setup-timeseries.ts",
     "generate-data": "bun run src/generate-data.ts",
     "insert-data": "bun run src/insert-data.ts",
+    "insert-timeseries": "bun run src/stream-insert-timeseries.ts",
+    "copy-50m-timeseries": "bun run src/copy-50m-to-timeseries.ts",
     "benchmark": "bun run src/benchmark.ts",
-    "benchmark-parallel": "bun run src/benchmark-parallel.ts"
+    "benchmark-timeseries": "bun run src/benchmark-timeseries.ts",
+    "benchmark-fair": "bun run src/benchmark-fair-comparison.ts",
+    "setup-25m": "bun run src/setup-25m-all.ts",
+    "populate-25m": "bun run src/populate-25m-simple.ts",
+    "populate-core": "bun run src/populate-core-dbs.ts"
   },
   "dependencies": {
     "@clickhouse/client": "^0.3.0",
-    "pg": "^8.11.3"
+    "pg": "^8.11.3",
+    "node-fetch": "^3.3.2",
+    "@influxdata/influxdb-client": "^1.35.0"
   },
   "devDependencies": {
     "@types/pg": "^8.10.9",

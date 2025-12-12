@@ -29,3 +29,16 @@ services:
         soft: 262144
         hard: 262144
     restart: unless-stopped
+
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    environment:
+      POSTGRES_DB: stockdata
+      POSTGRES_USER: postgres  
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - ./data/timescaledb:/var/lib/postgresql/data
+    restart: unless-stopped
+
